@@ -104,21 +104,20 @@ async function iniciarBot() {
 
   function enviarLembretes(sock) {
   getLembretes().then(lembretes => {
-
     if (lembretes && lembretes.length > 0) {
+      const listaFormatada = lembretes.map(l =>
+        `👤 *Cliente:* ${l.cliente}\n` +
+        `🛠️ *Serviço:* ${l.servico}\n` +
+        `📅 *Data:* ${l.data}\n` +
+        `⏰ *Hora:* ${l.hora}`
+      ).join('\n\n') // <- linha em branco entre cada agendamento
 
-        return sock.sendMessage(GRUPO_AGENDA_ID, {
-          text: `📅 Lembretes de agendamentos para amanhã:\n\n` +
-                lembretes.map(l => 
-                  `👤 Cliente: ${l.cliente}\n
-                  🛠️ Serviço: ${l.servico}\n
-                  📅 Data: ${l.data}\n
-                  ⏰ Hora: ${l.hora}\n`).join('\n')
-        })
-      } else { return }
-    })
-  }
-
+      return sock.sendMessage(GRUPO_AGENDA_ID, {
+        text: `📅 *Lembretes para amanhã:*\n\n${listaFormatada}`,
+      })
+    }
+  })
+}
 
 
   sock.ev.on('creds.update', saveCreds)
@@ -159,7 +158,10 @@ async function iniciarBot() {
       msg.message.extendedTextMessage?.text ||
       ''
 
-       if (texto.startsWith('⚠️') || texto.startsWith('✅') || texto.startsWith('💰')) {
+       if (texto.startsWith('⚠️') || 
+          texto.startsWith('✅') || 
+          texto.startsWith('💰') ||
+          texto.startsWith('📅')) {
     return
   }
 
