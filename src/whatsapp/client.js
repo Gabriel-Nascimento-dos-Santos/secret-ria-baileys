@@ -7,6 +7,7 @@ import db from '../config/db.js';
 import dotenv from 'dotenv';
 import { faturamentoPorMes } from '../services/financeiro.js'
 import getLembretes from '../services/lembrete.js'
+import Custo from '../services/custo.js'
 
 dotenv.config();
 
@@ -92,6 +93,14 @@ app.get('/agendamentos', async (req, res) => {
   }
 
 
+  function isMensagemCusto (texto){
+    if (typeof texto !== 'string' || !texto.trim())
+       return false
+    
+     return /^(custo|despesa)\s*-/i.test(texto.trim())
+  }
+
+
 async function iniciarBot() {
   const { state, saveCreds } = await useMultiFileAuthState('auth')
 
@@ -110,7 +119,7 @@ async function iniciarBot() {
         `🛠️ *Serviço:* ${l.servico}\n` +
         `📅 *Data:* ${l.data}\n` +
         `⏰ *Hora:* ${l.hora}`
-      ).join('\n\n') // <- linha em branco entre cada agendamento
+      ).join('\n\n') 
 
       return sock.sendMessage(GRUPO_AGENDA_ID, {
         text: `📅 *Lembretes para amanhã:*\n\n${listaFormatada}`,
@@ -192,6 +201,38 @@ async function iniciarBot() {
       })
       return
     }
+//Comando para subtrair custo do valor total
+
+    if (isMensagemCusto(texto)) {
+      const partes = texto.split('-').map(item => item.trim())
+
+      const id = partes[1]?.trim();
+      const valorCusto = partes[2]?.trim();
+
+      if (!id || !valorCusto) {
+        await sock.sendMessage(remetenteGrupo, {
+          text: '⚠️ Formato inválido. Envie no formato: "custo - ID - Valor"',
+        })
+        return
+      }
+
+      const resultado = await Custo({ id: parseInt(id), custo: parseFloat(valorCusto) })
+      console.log(resultado);
+
+      if (resultado.erro) {
+        await sock.sendMessage(remetenteGrupo, {
+          text: `⚠️ Erro ao atualizar o custo: ${resultado.erro}`,
+        })
+        return
+      }
+
+      await sock.sendMessage(remetenteGrupo, {
+        text: `✅ Custo atualizado com sucesso!`,
+      })
+      return
+    }
+
+//Comando para criar agendamento
 
     function isMensagemGatilho(texto) {
       if (typeof texto !== 'string' || !texto.trim()) return false
@@ -244,7 +285,6 @@ async function iniciarBot() {
       if(!nome || !servico || !data || !hora){
          return null;
       }
-      
       return { nome, servico, data, hora, preco };
     };
 
